@@ -1,7 +1,7 @@
 /* GovTech Nepal — site styles. Mukta (OFL), self-hosted. */
-@font-face{font-family:Mukta;src:url(/assets/fonts/Mukta-Regular.woff2) format("woff2");font-weight:400;font-display:swap}
-@font-face{font-family:Mukta;src:url(/assets/fonts/Mukta-Medium.woff2) format("woff2");font-weight:500;font-display:swap}
-@font-face{font-family:Mukta;src:url(/assets/fonts/Mukta-SemiBold.woff2) format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:Mukta;src:url(../fonts/Mukta-Regular.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:Mukta;src:url(../fonts/Mukta-Medium.woff2) format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:Mukta;src:url(../fonts/Mukta-SemiBold.woff2) format("woff2");font-weight:600;font-display:swap}
 
 :root{
   --blue:#003893; --crimson:#DC143C; --navy:#0B1530; --off:#F7F5F0;
@@ -167,7 +167,7 @@ html[lang=ne] .principles li::before{content:counter(p,devanagari)}
 .type-sample{border:1px solid var(--line);border-radius:var(--r);padding:1.5rem;background:var(--surface)}
 .type-sample .big{font-size:2.6rem;line-height:1.2;font-weight:600;margin:.2rem 0}
 .khand{font-family:Khand,Mukta,sans-serif;font-weight:500;letter-spacing:.02em}
-@font-face{font-family:Khand;src:url(/assets/fonts/Khand-Medium.woff2) format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:Khand;src:url(../fonts/Khand-Medium.woff2) format("woff2");font-weight:500;font-display:swap}
 .marks{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
 .marks figure{margin:0;border:1px solid var(--line);border-radius:var(--r);padding:1.4rem;background:var(--surface);text-align:center}
 .marks img{width:72px;height:72px;margin:0 auto .8rem}

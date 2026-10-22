@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Static site generator for govtechnepal.org (Python 3, no dependencies).
 Run:  python3 src/build.py   -> writes HTML, sitemap.xml and robots.txt into the site root."""
-import json, os, html
+import json, os, html, re
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SITE='https://govtechnepal.org'
 GITHUB='https://github.com/nirajbhusal/GovTech'
@@ -19,6 +19,8 @@ NAV=[('projects','projects/','Projects','परियोजना'),('nepalos','
      ('contribute','contribute/','Contribute','योगदान'),('about','about/','About','बारेमा'),('brand','brand/','Brand','ब्रान्ड')]
 def href(lang,path): return ('/ne/' if lang=='ne' else '/')+path
 EXT=' rel="noopener" target="_blank"'
+# f-string pieces kept outside the braces so the script runs on Python < 3.12
+AC=' aria-current="page"'; LAZY=' loading="lazy"'; SR=' <span class="sr">'; BADGE='<span class="badge">'
 RIDGE='<svg class="ridge" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="M0 112 L180 96 L300 70 L360 84 L470 40 L560 74 L640 58 L760 18 L850 64 L930 50 L1040 80 L1130 60 L1250 88 L1360 78 L1440 92" fill="none" stroke="currentColor" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>'
 MOON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>'
 
@@ -26,7 +28,7 @@ def page(lang,key,path,title,desc,body,extra_js=''):
     T=lambda en,ne: ne if lang=='ne' else en
     other='en' if lang=='ne' else 'ne'
     cur=lambda k: k==key or (k=='nepalos' and key=='slides')
-    nav=''.join(f'<li><a href="{href(lang,p)}"{" aria-current=\"page\"" if cur(k) else ""}>{T(en,ne)}</a></li>' for k,p,en,ne in NAV)
+    nav=''.join(f'<li><a href="{href(lang,p)}"{AC if cur(k) else ""}>{T(en,ne)}</a></li>' for k,p,en,ne in NAV)
     brand=T('GovTech Nepal','गभटेक नेपाल')
     full=f'{title} · {brand}' if key!='home' else T('GovTech Nepal · Open-source technology for public service','गभटेक नेपाल · सार्वजनिक सेवाका लागि खुला स्रोत प्रविधि')
     u_en=SITE+'/'+(path or ''); u_ne=SITE+'/ne/'+(path or ''); u=u_ne if lang=='ne' else u_en
@@ -87,7 +89,7 @@ def head(lang,title,lead,crumbs=(),kicker=''):
 
 def pic(src,alt,w=1280,h=800,cls='',lazy=True):
     base=src.rsplit('.',1)[0]
-    return f'<picture><source srcset="{base}.webp" type="image/webp"><img class="{cls}" src="{base}.jpg" alt="{html.escape(alt)}" width="{w}" height="{h}"{" loading=\"lazy\"" if lazy else ""} decoding="async"></picture>'
+    return f'<picture><source srcset="{base}.webp" type="image/webp"><img class="{cls}" src="{base}.jpg" alt="{html.escape(alt)}" width="{w}" height="{h}"{LAZY if lazy else ""} decoding="async"></picture>'
 
 # ---------- project data ----------
 def projects(lang):
@@ -111,7 +113,7 @@ def card(p,lang,big=False):
     T=lambda en,ne: ne if lang=='ne' else en
     img=f'<div class="card-img">{pic(p["img"],"",1280,800)}</div>' if (big and p.get('img')) else ''
     ext=EXT if p['ext'] else ''
-    title=f'<a class="stretch" href="{p["url"]}"{ext}>{p["name"]}{" <span class=\"sr\">"+T("(opens in a new tab)","(नयाँ ट्याबमा खुल्छ)")+"</span>" if p["ext"] else ""}</a>' if p['url'] else p['name']
+    title=f'<a class="stretch" href="{p["url"]}"{ext}>{p["name"]}{SR+T("(opens in a new tab)","(नयाँ ट्याबमा खुल्छ)")+"</span>" if p["ext"] else ""}</a>' if p['url'] else p['name']
     more=f'<span class="more" aria-hidden="true">{T("Visit site","साइट हेर्नुहोस्") if p["ext"] else T("Learn more","थप जान्नुहोस्")} {"↗" if p["ext"] else "→"}</span>' if p['url'] else ''
     repo=f'<a class="repo" href="{p["repo"]}"{EXT}>{T("Source on GitHub","GitHub मा स्रोत कोड")}</a>' if p.get('repo') and big else ''
     return f'<li class="card{" soon" if not p["live"] else ""}">{img}<div class="card-body"><span class="badge{" live" if p["live"] else ""}">{p["badge"]}</span><h3>{title}</h3><p class="tagline">{p["tag"]}</p><p>{p["text"]}</p>{more}{repo}</div></li>'
@@ -233,7 +235,7 @@ def build(lang):
 <p>{T("The original NepalOS proposal deck, as a simple slide viewer.","नेपालओएसको मूल प्रस्ताव स्लाइड, सरल स्लाइड भ्युअरमा।")} <a href="{href(lang,"nepalos/slides/")}">{T("Open the slides","स्लाइड खोल्नुहोस्")} →</a></p>
 </div>''')
     # SLIDES
-    sl=''.join(f'<li class="slide" id="s{n}" data-n="{i+1}"><figure>{pic(f"/nepalos/slides/img/slide-{n:02d}.jpg",T("Slide","स्लाइड")+" "+d(str(n))+": "+T(*STITLE[n]),1600,901,"",i>1)}<figcaption><span>{d(str(i+1))} / {d(str(len(SLIDES)))} · {T(*STITLE[n])}</span>{"<span class=\"badge\">"+T("Early draft","प्रारम्भिक मस्यौदा")+"</span>" if f=="draft" else ""}</figcaption></figure></li>' for i,(n,f,_) in enumerate(SLIDES))
+    sl=''.join(f'<li class="slide" id="s{n}" data-n="{i+1}"><figure>{pic(f"/nepalos/slides/img/slide-{n:02d}.jpg",T("Slide","स्लाइड")+" "+d(str(n))+": "+T(*STITLE[n]),1600,901,"",i>1)}<figcaption><span>{d(str(i+1))} / {d(str(len(SLIDES)))} · {T(*STITLE[n])}</span>{BADGE+T("Early draft","प्रारम्भिक मस्यौदा")+"</span>" if f=="draft" else ""}</figcaption></figure></li>' for i,(n,f,_) in enumerate(SLIDES))
     dl=[('/downloads/nepalos/Nepal-OS-Proposal.pdf','PDF'),('/downloads/nepalos/Nepal-OS-Proposal.pptx','PowerPoint (.pptx)')]
     dls=' · '.join(f'<a href="{u}" download>{n}</a> <span class="muted">({size(u)})</span>' for u,n in dl if exists(u))
     out['slides']=(T('NepalOS slides','नेपालओएस स्लाइड'),T('The NepalOS proposal deck as a keyboard-navigable slide viewer.','किबोर्डबाट चलाउन मिल्ने स्लाइड भ्युअरमा नेपालओएस प्रस्ताव।'),
@@ -359,15 +361,21 @@ def build(lang):
 </div>''')
     return out
 
+def relative(doc,d):
+    """Rewrite root paths ("/x") to paths relative to the page's folder d, e.g. "ne/about/" -> "../../x"."""
+    up='../'*d.count('/') or './'
+    return re.sub(r'((?:href|src|srcset|content)=")/(?!/)',lambda m: m.group(1)+up,doc)
+
 urls=[]
 for lang in ('en','ne'):
     content=build(lang)
     for key,path in PAGES:
         v=content[key]; title,desc,body=v[:3]; js=v[3] if len(v)>3 else ''
         dd=os.path.join(ROOT,'ne' if lang=='ne' else '',path); os.makedirs(dd,exist_ok=True)
-        open(os.path.join(dd,'index.html'),'w').write(page(lang,key,path,title,desc,body,js))
+        open(os.path.join(dd,'index.html'),'w').write(relative(page(lang,key,path,title,desc,body,js),('ne/' if lang=='ne' else '')+path))
         urls.append(SITE+('/ne/' if lang=='ne' else '/')+path)
 b='<section class="page-head"><div class="wrap"><h1>Page not found · पृष्ठ भेटिएन</h1><p class="lead">The page you were looking for doesn’t exist. <a href="/">Go to the home page</a>.</p><p class="lead" lang="ne">हजुरले खोज्नुभएको पृष्ठ भेटिएन। <a href="/ne/">गृहपृष्ठमा जानुहोस्</a>।</p></div></section>'
+# 404.html is served for any missing URL at any depth, so relative paths would break; it keeps root paths
 open(os.path.join(ROOT,'404.html'),'w').write(page('en','404',None,'Page not found','Page not found',b))
 urls.append(SITE+'/demo/')
 open(os.path.join(ROOT,'sitemap.xml'),'w').write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+''.join(f'  <url><loc>{u}</loc></url>\n' for u in urls)+'</urlset>\n')
