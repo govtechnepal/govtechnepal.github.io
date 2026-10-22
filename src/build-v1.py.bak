@@ -1,0 +1,271 @@
+#!/usr/bin/env python3
+"""Static site generator for govtechnepal.org. No dependencies beyond Python 3.
+Usage: python3 src/build.py   (writes HTML into the site root: /, /ne/, ...)"""
+import json, os, html
+ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SITE='https://govtechnepal.org'
+P=json.load(open(os.path.join(ROOT,'projects.json')))['projects']
+DIG=str.maketrans('0123456789','०१२३४५६७८९')
+
+PAGES=[('home',''),('nepal-os','projects/nepal-os/'),('lipi','projects/lipi/'),('principles','principles/'),
+       ('contribute','contribute/'),('about','about/'),('brand','brand/')]
+NAV=[('projects','/#projects','Projects','परियोजना'),('principles','principles/','Principles','सिद्धान्त'),
+     ('contribute','contribute/','Contribute','योगदान'),('about','about/','About','बारेमा'),('brand','brand/','Brand','ब्रान्ड')]
+
+def href(lang,path):
+    if path.startswith('/#'): return ('/ne/' if lang=='ne' else '/')+path[1:]
+    return ('/ne/' if lang=='ne' else '/')+path
+
+RIDGE='''<svg class="ridge" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="M0 112 L180 96 L300 70 L360 84 L470 40 L560 74 L640 58 L760 18 L850 64 L930 50 L1040 80 L1130 60 L1250 88 L1360 78 L1440 92" fill="none" stroke="currentColor" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>'''
+SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
+MOON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>'
+
+def page(lang, key, path, title, desc, body):
+    T=lambda en,ne: ne if lang=='ne' else en
+    other='en' if lang=='ne' else 'ne'
+    nav=''.join(f'<li><a href="{href(lang,p)}"{" aria-current=\"page\"" if k==key or (k=="projects" and key in ("nepal-os","lipi")) else ""}>{T(en,ne)}</a></li>' for k,p,en,ne in NAV)
+    full=f'{title} · {T("GovTech Nepal","गभटेक नेपाल")}' if key!='home' else T('GovTech Nepal · Open technology for public service','गभटेक नेपाल · सार्वजनिक सेवाका लागि खुला प्रविधि')
+    url_en=SITE+'/'+path; url_ne=SITE+'/ne/'+path
+    return f'''<!doctype html>
+<html lang="{lang}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{html.escape(full)}</title>
+<meta name="description" content="{html.escape(desc)}">
+<link rel="canonical" href="{url_ne if lang=='ne' else url_en}">
+<link rel="alternate" hreflang="en" href="{url_en}"><link rel="alternate" hreflang="ne" href="{url_ne}"><link rel="alternate" hreflang="x-default" href="{url_en}">
+<meta property="og:title" content="{html.escape(full)}"><meta property="og:description" content="{html.escape(desc)}">
+<meta property="og:type" content="website"><meta property="og:url" content="{url_ne if lang=='ne' else url_en}"><meta property="og:image" content="{SITE}/apple-touch-icon.png">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#0B1530" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/assets/brand/favicon-2.svg" type="image/svg+xml"><link rel="icon" href="/favicon.png" type="image/png" sizes="48x48"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preload" href="/assets/fonts/Mukta-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/Mukta-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/css/site.css">
+<script>try{{var t=localStorage.getItem('gtn-theme');if(t)document.documentElement.setAttribute('data-theme',t)}}catch(e){{}}</script>
+</head>
+<body>
+<a class="skip" href="#main">{T('Skip to content','मुख्य सामग्रीमा जानुहोस्')}</a>
+<header class="site-header"><div class="wrap hdr">
+  <a class="brand" href="{href(lang,'')}" aria-label="{T('GovTech Nepal, home','गभटेक नेपाल, गृहपृष्ठ')}">
+    <img class="mark mark-light" src="/assets/brand/mark-2-light.svg" alt="" width="44" height="44">
+    <img class="mark mark-dark" src="/assets/brand/mark-2-dark.svg" alt="" width="44" height="44">
+    <span class="wm"><span class="wm-en" lang="en">GovTech <span>Nepal</span></span><span class="wm-ne" lang="ne">गभटेक नेपाल</span></span>
+  </a>
+  <nav class="nav" aria-label="{T('Main','मुख्य')}"><ul>{nav}</ul></nav>
+  <div class="tools">
+    <a class="lang" href="{href(other,path)}" hreflang="{other}" lang="{other}">{'English' if lang=='ne' else 'नेपाली'}</a>
+    <button class="theme-btn" type="button" aria-pressed="false" aria-label="{T('Dark mode','डार्क मोड')}" title="{T('Toggle dark mode','डार्क मोड खोल्नुहोस् / बन्द गर्नुहोस्')}"><span class="i-sun">{MOON}</span></button>
+  </div>
+</div></header>
+<main id="main">
+{body}
+</main>
+<footer class="site-footer"><div class="wrap">
+  <div class="ftr">
+    <div>
+      <p class="notice small"><strong>{T('An independent community project.','एक स्वतन्त्र सामुदायिक परियोजना।')}</strong> {T('GovTech Nepal is not an official body of the Government of Nepal and does not speak for it.','गभटेक नेपाल नेपाल सरकारको आधिकारिक निकाय होइन, र सरकारको तर्फबाट बोल्दैन।')}</p>
+    </div>
+    <nav aria-label="{T('Footer','फुटर')}"><ul>{nav}<li><a href="/projects.json">projects.json</a></li></ul></nav>
+  </div>
+  <div class="fine">
+    <span>© 2026 GovTech Nepal · govtechnepal.org</span>
+    <div class="logo-switch" role="group" aria-label="{T('Logo concept','लोगो अवधारणा')}"><span>{T('Logo','लोगो')}</span>
+      {''.join(f'<button type="button" data-logo="{n}" aria-pressed="{"true" if n=="2" else "false"}" aria-label="{T("Logo concept","लोगो अवधारणा")} {n}">{n.translate(DIG) if lang=="ne" else n}</button>' for n in "1234")}
+    </div>
+  </div>
+</div></footer>
+<script src="/assets/js/site.js" defer></script>
+</body>
+</html>
+'''
+
+STATUS={'development':('In development','विकास हुँदै'),'early-release':('Early release','प्रारम्भिक संस्करण'),'coming-soon':('Coming soon','छिट्टै आउँदैछ')}
+
+def cards(lang):
+    T=lambda en,ne: ne if lang=='ne' else en
+    out=[]
+    for p in P:
+        st=STATUS[p['status']]; badge=T(*st)
+        if p['status']=='coming-soon':
+            out.append(f'<li class="card soon"><span class="badge">{badge}</span><h3>{T("Your project here","तपाईंको परियोजना")}</h3><p>{T("We are planning more open tools for public service. Have an idea that would help a government office?","सार्वजनिक सेवाका लागि थप खुला उपकरणहरूको योजना छ। सरकारी कार्यालयलाई सघाउने कुनै विचार छ?")}</p><a class="more" href="{href(lang,"contribute/")}#propose">{T("Propose a project","परियोजना प्रस्ताव गर्नुहोस्")}</a></li>')
+        else:
+            v=(f' · {p["version"]}'.translate(DIG) if lang=='ne' else f' · v{p["version"]}') if p.get('version') else ''
+            out.append(f'<li class="card"><span class="badge live">{badge}{v}</span><h3><a class="stretch" href="{href(lang,p["url"][1:])}">{p["name"][lang]}</a></h3><p class="tagline">{p["tagline"][lang]}</p><p>{p["summary"][lang]}</p><span class="more" aria-hidden="true">{T("Read more","थप पढ्नुहोस्")} →</span></li>')
+    return '<ul class="grid" role="list" style="list-style:none;margin:0;padding:0">'+''.join(out)+'</ul>'
+
+PRIN=[('Open by default','पूर्वनिर्धारित रूपमा खुला','Code, designs and decisions are public, so anyone can check, reuse and improve them.','कोड, डिजाइन र निर्णयहरू सार्वजनिक हुन्छन्, ताकि जो कोहीले जाँच्न, पुनः प्रयोग गर्न र सुधार्न सकून्।'),
+      ('Nepali first','नेपाली पहिलो','Nepali language, Unicode text and Bikram Sambat dates work properly from day one, not as an afterthought.','नेपाली भाषा, युनिकोड र विक्रम संवत् मिति पछि थपिने होइन, पहिलो दिनदेखि नै राम्ररी चल्छन्।'),
+      ('Privacy and sovereignty','गोपनीयता र सार्वभौमिकता','No hidden tracking. Public data stays in Nepal, under Nepali control.','कुनै लुकेको ट्र्याकिङ छैन। सार्वजनिक डेटा नेपालमै, नेपालकै नियन्त्रणमा रहन्छ।'),
+      ('Proven foundations','प्रमाणित आधार','We build on mature open-source projects such as Debian instead of reinventing them.','हामी डेबियनजस्ता परिपक्व खुला स्रोत परियोजनामाथि निर्माण गर्छौं, नयाँ सिराबाट होइन।'),
+      ('Accessible to all','सबैका लागि पहुँचयोग्य','Usable by people of all abilities, in Nepali and English, on modest hardware.','सबै क्षमताका मानिसले, नेपाली र अङ्ग्रेजी दुवैमा, साधारण हार्डवेयरमा पनि प्रयोग गर्न सक्ने।'),
+      ('Community-led','समुदायको नेतृत्व','Anyone can contribute. Plans and discussions happen in the open.','जो कोहीले योगदान गर्न सक्छन्। योजना र छलफल खुला रूपमा हुन्छन्।')]
+def principles(lang,n=6):
+    T=lambda en,ne: ne if lang=='ne' else en
+    return '<ol class="principles">'+''.join(f'<li><h3>{T(a,b)}</h3><p>{T(c,d)}</p></li>' for a,b,c,d in PRIN[:n])+'</ol>'
+
+def head(lang, crumb, title, lead):
+    T=lambda en,ne: ne if lang=='ne' else en
+    c=f'<p class="crumb"><a href="{href(lang,"")}">{T("Home","गृहपृष्ठ")}</a>{crumb}</p>'
+    return f'<section class="page-head"><div class="wrap">{c}<h1>{title}</h1><p class="lead">{lead}</p></div></section>'
+
+def build(lang):
+    T=lambda en,ne: ne if lang=='ne' else en
+    d=lambda s: s.translate(DIG) if lang=='ne' else s
+    out={}
+    # HOME
+    out['home']=(T('Home','गृहपृष्ठ'),T('A community hub for open-source government technology for Nepal: Nepal OS, Lipi and more.','नेपालका लागि खुला स्रोत सरकारी प्रविधिको सामुदायिक केन्द्र: नेपाल ओएस, लिपि र थप।'),f'''
+<section class="hero"><div class="wrap">
+  <p class="eyebrow">{T("Open-source technology for Nepal's public sector","नेपालको सार्वजनिक क्षेत्रका लागि खुला स्रोत प्रविधि")}</p>
+  <h1>{T("Open, Nepali-first technology for public service.","सार्वजनिक सेवाका लागि खुला र नेपाली भाषामैत्री प्रविधि।")}</h1>
+  <p class="lead">{T("GovTech Nepal is a community hub for open-source projects that help government offices work better: in Nepali, on software they can trust and own.","गभटेक नेपाल सरकारी कार्यालयहरूलाई अझ राम्रोसँग काम गर्न सघाउने खुला स्रोत परियोजनाहरूको सामुदायिक केन्द्र हो: नेपाली भाषामा, भरपर्दो र आफ्नै स्वामित्वको सफ्टवेयरमा।")}</p>
+  <div class="actions"><a class="btn btn-primary" href="#projects">{T("Explore projects","परियोजनाहरू हेर्नुहोस्")}</a><a class="btn btn-ghost" href="{href(lang,"contribute/")}">{T("How to contribute","कसरी योगदान गर्ने")}</a></div>
+</div>{RIDGE}</section>
+<section class="section alt" id="projects" aria-labelledby="h-projects"><div class="wrap">
+  <div class="sec-head"><div><h2 id="h-projects">{T("Projects","परियोजनाहरू")}</h2><p class="muted">{T("Every project is open source and built in the open.","हरेक परियोजना खुला स्रोत हो र खुला रूपमै बनाइन्छ।")}</p></div></div>
+  {cards(lang)}
+</div></section>
+<section class="section" aria-labelledby="h-prin"><div class="wrap">
+  <div class="sec-head"><h2 id="h-prin">{T("How we work","हामी कसरी काम गर्छौं")}</h2><a href="{href(lang,"principles/")}">{T("All principles","सबै सिद्धान्तहरू")} →</a></div>
+  {principles(lang,3)}
+</div></section>
+<section class="section alt" aria-labelledby="h-join"><div class="wrap">
+  <h2 id="h-join">{T("Help build it","निर्माणमा सघाउनुहोस्")}</h2>
+  <p class="lead">{T("Developers, translators, designers, testers and public servants are all welcome. You don’t need to write code to make a difference.","डेभलपर, अनुवादक, डिजाइनर, परीक्षक र सरकारी कर्मचारी सबैलाई स्वागत छ। फरक ल्याउन कोड लेख्नै पर्छ भन्ने छैन।")}</p>
+  <div class="actions"><a class="btn btn-primary" href="{href(lang,"contribute/")}">{T("Start contributing","योगदान सुरु गर्नुहोस्")}</a><a class="btn btn-ghost" href="{href(lang,"about/")}">{T("About GovTech Nepal","गभटेक नेपालको बारेमा")}</a></div>
+</div></section>''')
+    crumbP=f' / <a href="{href(lang,"")}#projects">{T("Projects","परियोजनाहरू")}</a>'
+    # NEPAL OS
+    out['nepal-os']=(T('Nepal OS','नेपाल ओएस'),T('Nepal OS: a free, Debian-based, Nepali-first operating system for government offices.','नेपाल ओएस: सरकारी कार्यालयहरूका लागि डेबियनमा आधारित, निःशुल्क र नेपाली भाषामैत्री अपरेटिङ सिस्टम।'),
+    head(lang,crumbP,T('Nepal OS','नेपाल ओएस'),T('One free, Nepali-first operating system that any government office can use, built on Debian.','कुनै पनि सरकारी कार्यालयले प्रयोग गर्न सक्ने, डेबियनमा आधारित एउटै निःशुल्क र नेपाली भाषामैत्री अपरेटिङ सिस्टम।'))+f'''
+<div class="wrap prose"><div class="two"><div>
+<h2>{T("Why Nepal OS","किन नेपाल ओएस")}</h2>
+<p>{T("Government offices pay recurring licence fees, depend on foreign vendors for basic software, and still struggle with documents written in legacy fonts such as Preeti. Nepal OS proposes one shared, open foundation instead.","सरकारी कार्यालयहरूले बारम्बार लाइसेन्स शुल्क तिर्छन्, आधारभूत सफ्टवेयरका लागि विदेशी विक्रेतामा निर्भर छन्, र प्रीतिजस्ता पुराना फन्टमा लेखिएका कागजातसँग अझै समस्या भोगिरहेका छन्। नेपाल ओएसले यसको सट्टा एउटै साझा, खुला आधारको प्रस्ताव गर्छ।")}</p>
+<p>{T("It is not a new system written from scratch. It is a carefully configured Debian, one of the most stable and widely trusted Linux distributions, with everything a Nepali office needs set up by default.","यो शून्यबाट लेखिएको नयाँ प्रणाली होइन। यो विश्वका सबैभन्दा स्थिर र भरपर्दा लिनक्स वितरणमध्ये एक, डेबियनको सावधानीपूर्वक मिलाइएको रूप हो, जसमा नेपाली कार्यालयलाई चाहिने सबै कुरा पहिल्यै तयार हुन्छ।")}</p>
+<h2>{T("What’s inside","यसमा के छ")}</h2>
+<ul class="feature-list">
+<li><b>{T("Office suite","अफिस सुइट")}</b><span>{T("LibreOffice for documents, spreadsheets and presentations.","कागजात, स्प्रेडसिट र प्रस्तुतिका लागि लिब्रेअफिस।")}</span></li>
+<li><b>{T("Nepali fonts and keyboards","नेपाली फन्ट र किबोर्ड")}</b><span>{T("Unicode Nepali everywhere, including the Lipi keyboard.","लिपि किबोर्डसहित, जताततै युनिकोड नेपाली।")}</span></li>
+<li><b>{T("Bikram Sambat calendar","विक्रम संवत् पात्रो")}</b><span>{T("Official dates shown the way offices actually use them.","कार्यालयले वास्तवमै प्रयोग गर्ने तरिकामा आधिकारिक मिति।")}</span></li>
+<li><b>{T("One image, every ministry","एउटै इमेज, हरेक मन्त्रालय")}</b><span>{T("Office name and branding are set at install time.","कार्यालयको नाम र ब्रान्डिङ इन्स्टल गर्दा सेट हुन्छ।")}</span></li>
+</ul>
+<h2>{T("Deployment at scale","ठूलो स्तरमा जडान")}</h2>
+<ul><li>{T("Automatic, unattended installation on many machines at once.","एकैपटक धेरै कम्प्युटरमा स्वचालित इन्स्टलेसन।")}</li><li>{T("A national package mirror, so updates come from inside Nepal.","राष्ट्रिय प्याकेज मिरर, ताकि अपडेट नेपालभित्रैबाट आओस्।")}</li><li>{T("Staged updates: tested on a small group first, then rolled out.","चरणबद्ध अपडेट: पहिले सानो समूहमा परीक्षण, त्यसपछि सबैतिर।")}</li></ul>
+<h2>{T("Security and sovereignty","सुरक्षा र सार्वभौमिकता")}</h2>
+<p>{T("No telemetry. Data stays in Nepal. Security fixes follow Debian’s long-established update process.","कुनै टेलिमेट्री छैन। डेटा नेपालमै रहन्छ। सुरक्षा सुधार डेबियनको लामो समयदेखि स्थापित अपडेट प्रक्रियाअनुसार आउँछन्।")}</p>
+<h2>{T("Status","अवस्था")}</h2>
+<p>{T("Nepal OS is at the planning and prototype stage. The proposal is a pilot in a few offices, working towards version 1.0 within about twelve months. Community efforts such as EU OS show the approach can work.","नेपाल ओएस योजना र प्रोटोटाइप चरणमा छ। केही कार्यालयमा पाइलट गर्दै करिब बाह्र महिनाभित्र संस्करण १.० तर्फ अघि बढ्ने प्रस्ताव छ। EU OS जस्ता सामुदायिक प्रयासले यो तरिका सम्भव छ भन्ने देखाउँछन्।")}</p>
+<div class="actions"><a class="btn btn-primary" href="{href(lang,"contribute/")}">{T("Get involved","सहभागी हुनुहोस्")}</a></div>
+</div>
+<aside class="facts" aria-label="{T("Key facts","मुख्य तथ्य")}"><dl>
+<dt>{T("Status","अवस्था")}</dt><dd>{T("In development","विकास हुँदै")}</dd>
+<dt>{T("Based on","आधार")}</dt><dd>Debian GNU/Linux</dd>
+<dt>{T("For","कसका लागि")}</dt><dd>{T("Government offices","सरकारी कार्यालयहरू")}</dd>
+<dt>{T("Licence","लाइसेन्स")}</dt><dd>{T("Free and open source","निःशुल्क र खुला स्रोत")}</dd>
+<dt>{T("Source code","स्रोत कोड")}</dt><dd>{T("Repository coming soon","रिपोजिटरी छिट्टै")}</dd>
+</dl></aside></div></div>''')
+    # LIPI
+    out['lipi']=(T('Lipi','लिपि'),T('Lipi: a free Nepali keyboard. Type Nepali.','लिपि: निःशुल्क नेपाली किबोर्ड।'),
+    head(lang,crumbP,T('Lipi','लिपि'),T('Type Nepali. A free keyboard for writing correct Unicode Nepali in any app.','नेपाली टाइप गर्नुहोस्। जुनसुकै एपमा शुद्ध युनिकोड नेपाली लेख्नका लागि निःशुल्क किबोर्ड।'))+f'''
+<div class="wrap prose"><div class="two"><div>
+<h2>{T("Why Lipi","किन लिपि")}</h2>
+<p>{T("Many offices still type Nepali in legacy fonts that only look right on one computer. Lipi types real Unicode Nepali, so text can be searched, shared and read correctly on any device.","धेरै कार्यालयले अझै पनि एउटै कम्प्युटरमा मात्र ठीक देखिने पुराना फन्टमा नेपाली टाइप गर्छन्। लिपिले वास्तविक युनिकोड नेपाली टाइप गर्छ, जसले गर्दा पाठ जुनसुकै उपकरणमा खोज्न, बाँड्न र ठीकसँग पढ्न सकिन्छ।")}</p>
+<h2>{T("Highlights","मुख्य विशेषता")}</h2>
+<ul class="feature-list">
+<li><b>{T("Unicode by default","सधैँ युनिकोड")}</b><span>{T("Works in browsers, office apps and email.","ब्राउजर, अफिस एप र इमेलमा चल्छ।")}</span></li>
+<li><b>{T("Simple to install","सजिलो इन्स्टलेसन")}</b><span>{T("A small installer, no account needed.","सानो इन्स्टलर, खाता आवश्यक छैन।")}</span></li>
+<li><b>{T("Free and open","निःशुल्क र खुला")}</b><span>{T("No cost, no ads, no tracking.","शुल्क, विज्ञापन र ट्र्याकिङ केही छैन।")}</span></li>
+<li><b>{T("Part of Nepal OS","नेपाल ओएसको अंश")}</b><span>{T("Included as a default keyboard.","पूर्वनिर्धारित किबोर्डका रूपमा समावेश।")}</span></li>
+</ul>
+<h2>{T("Download","डाउनलोड")}</h2>
+<p>{T("An early release (version 0.1.2) is available for Windows. A public download and source repository will be linked here soon.","विन्डोजका लागि प्रारम्भिक संस्करण (०.१.२) उपलब्ध छ। सार्वजनिक डाउनलोड र स्रोत रिपोजिटरी छिट्टै यहाँ राखिनेछ।")}</p>
+<div class="actions"><a class="btn btn-primary" href="{href(lang,"contribute/")}">{T("Help test Lipi","लिपि परीक्षणमा सघाउनुहोस्")}</a></div>
+</div>
+<aside class="facts" aria-label="{T("Key facts","मुख्य तथ्य")}"><dl>
+<dt>{T("Status","अवस्था")}</dt><dd>{T("Early release","प्रारम्भिक संस्करण")}</dd>
+<dt>{T("Version","संस्करण")}</dt><dd>{d("0.1.2")}</dd>
+<dt>{T("Platform","प्लेटफर्म")}</dt><dd>{T("Windows","विन्डोज")}</dd>
+<dt>{T("Tagline","नारा")}</dt><dd lang="en">Type Nepali</dd>
+<dt>{T("Source code","स्रोत कोड")}</dt><dd>{T("Repository coming soon","रिपोजिटरी छिट्टै")}</dd>
+</dl></aside></div></div>''')
+    # PRINCIPLES
+    out['principles']=(T('Principles','सिद्धान्तहरू'),T('The principles behind every GovTech Nepal project.','गभटेक नेपालका हरेक परियोजनाका आधारभूत सिद्धान्तहरू।'),
+    head(lang,'',T('Principles','सिद्धान्तहरू'),T('Six commitments that guide every project we build.','हामीले बनाउने हरेक परियोजनालाई डोऱ्याउने छवटा प्रतिबद्धता।'))+f'<div class="wrap prose">{principles(lang)}</div>')
+    # CONTRIBUTE
+    WAYS=[('Write code','कोड लेख्नुहोस्','Fix bugs, package software and improve tools.','बग सच्याउनुहोस्, सफ्टवेयर प्याकेज गर्नुहोस् र उपकरण सुधार्नुहोस्।'),
+          ('Translate and review','अनुवाद र समीक्षा','Make interfaces read naturally in Nepali.','इन्टरफेसलाई नेपालीमा स्वाभाविक बनाउनुहोस्।'),
+          ('Test on real machines','वास्तविक कम्प्युटरमा परीक्षण','Try builds on the hardware offices actually use.','कार्यालयले प्रयोग गर्ने हार्डवेयरमा परीक्षण गर्नुहोस्।'),
+          ('Design and accessibility','डिजाइन र पहुँचयोग्यता','Help make every screen clear and usable for all.','हरेक स्क्रिन सबैका लागि स्पष्ट र प्रयोगयोग्य बनाउन सघाउनुहोस्।'),
+          ('Write documentation','डकुमेन्टेसन लेख्नुहोस्','Guides for installers, IT staff and everyday users.','इन्स्टल गर्ने, आईटी कर्मचारी र सामान्य प्रयोगकर्ताका लागि गाइड।'),
+          ('Share what offices need','कार्यालयको आवश्यकता बताउनुहोस्','Public servants: tell us where software gets in the way.','सरकारी कर्मचारीहरू: सफ्टवेयरले कहाँ अप्ठ्यारो पार्छ, बताउनुहोस्।')]
+    out['contribute']=(T('Contribute','योगदान'),T('How to contribute to GovTech Nepal projects.','गभटेक नेपालका परियोजनामा कसरी योगदान गर्ने।'),
+    head(lang,'',T('Contribute','योगदान गर्नुहोस्'),T('There is a place for you, whether you write code or not.','तपाईं कोड लेख्नुहुन्छ वा लेख्नुहुन्न, तपाईंका लागि ठाउँ छ।'))+f'''
+<div class="wrap prose">
+<h2>{T("Ways to help","सघाउने तरिकाहरू")}</h2>
+<ul class="feature-list">{''.join(f'<li><b>{T(a,b)}</b><span>{T(c,e)}</span></li>' for a,b,c,e in WAYS)}</ul>
+<h2>{T("Getting started","सुरु गर्ने तरिका")}</h2>
+<p>{T("Project repositories and discussion spaces are being set up. They will be linked from each project page as soon as they are public.","परियोजनाका रिपोजिटरी र छलफल गर्ने ठाउँहरू तयार हुँदैछन्। सार्वजनिक हुनासाथ हरेक परियोजना पृष्ठमा लिङ्क राखिनेछ।")}</p>
+<h2 id="propose">{T("Propose a project","परियोजना प्रस्ताव गर्नुहोस्")}</h2>
+<p>{T("Good proposals solve a real problem for a government office, can be open source, and build on existing tools where possible. Describe the problem first, then the idea.","राम्रो प्रस्तावले सरकारी कार्यालयको वास्तविक समस्या समाधान गर्छ, खुला स्रोत हुन सक्छ, र सम्भव भएसम्म भइरहेका उपकरणमाथि निर्माण गर्छ। पहिले समस्या, त्यसपछि विचार लेख्नुहोस्।")}</p>
+<p class="notice">{T("Please don’t share personal or confidential government data in any public issue or discussion.","कृपया कुनै पनि सार्वजनिक इस्यु वा छलफलमा व्यक्तिगत वा गोप्य सरकारी डेटा नबाँड्नुहोस्।")}</p>
+</div>''')
+    # ABOUT
+    out['about']=(T('About','हाम्रो बारेमा'),T('About GovTech Nepal, an independent community for open government technology.','खुला सरकारी प्रविधिका लागि स्वतन्त्र समुदाय, गभटेक नेपालको बारेमा।'),
+    head(lang,'',T('About GovTech Nepal','गभटेक नेपालको बारेमा'),T('An independent community building open technology for Nepal’s public sector.','नेपालको सार्वजनिक क्षेत्रका लागि खुला प्रविधि बनाउने स्वतन्त्र समुदाय।'))+f'''
+<div class="wrap prose">
+<h2>{T("What we do","हामी के गर्छौं")}</h2>
+<p>{T("GovTech Nepal brings together open-source projects that make everyday government work simpler, more affordable and more Nepali, starting with Nepal OS and the Lipi keyboard.","गभटेक नेपालले नेपाल ओएस र लिपि किबोर्डबाट सुरु गर्दै, सरकारी दैनिक कामलाई सरल, सस्तो र नेपाली भाषामैत्री बनाउने खुला स्रोत परियोजनाहरूलाई एकै ठाउँमा ल्याउँछ।")}</p>
+<h2>{T("What we are not","हामी के होइनौँ")}</h2>
+<p class="notice"><strong>{T("We are not a Government of Nepal body.","हामी नेपाल सरकारको निकाय होइनौँ।")}</strong> {T("We are independent, we do not speak for any ministry, and we do not use the national emblem. Any adoption of our work by government is a decision for government.","हामी स्वतन्त्र छौँ, कुनै मन्त्रालयको तर्फबाट बोल्दैनौँ, र राष्ट्रिय निशान प्रयोग गर्दैनौँ। हाम्रो कामलाई सरकारले अपनाउने वा नअपनाउने निर्णय सरकारकै हो।")}</p>
+<h2>{T("How we work","हामी कसरी काम गर्छौं")}</h2>
+<p>{T("In the open, following our","खुला रूपमा, हाम्रा")} <a href="{href(lang,"principles/")}">{T("principles","सिद्धान्तहरू")}</a>{T(". Anyone can read the code, follow decisions and take part."," अनुसार। जो कोहीले कोड पढ्न, निर्णयहरू हेर्न र सहभागी हुन सक्छन्।")}</p>
+<h2>{T("The name","नाम")}</h2>
+<p>{T("“GovTech” is short for government technology. In Nepali we write it गभटेक नेपाल.","“GovTech” भनेको गभर्नमेन्ट टेक्नोलोजी (सरकारी प्रविधि) को छोटो रूप हो। नेपालीमा हामी यसलाई गभटेक नेपाल लेख्छौँ।")}</p>
+</div>''')
+    # BRAND
+    concepts=[('2',T('Default · ग tile','पूर्वनिर्धारित · ग टाइल')),('1',T('Concept 1 · Ridge','अवधारणा १ · हिमशृङ्खला')),('3',T('Concept 3 · G with peak','अवधारणा ३ · शिखरसहितको G')),('4',T('Concept 4 · Peak and node','अवधारणा ४ · शिखर र नोड'))]
+    sw=[('Deep blue','गाढा नीलो','#003893',T('Primary','मुख्य')),('Crimson','सिम्रिक','#DC143C',T('Accent, use sparingly','सहायक, थोरै मात्र')),('Navy','नेभी','#0B1530',T('Text and dark backgrounds','पाठ र गाढा पृष्ठभूमि')),('Off-white','हल्का सेतो','#F7F5F0',T('Light backgrounds','हल्का पृष्ठभूमि'))]
+    out['brand']=(T('Brand','ब्रान्ड'),T('GovTech Nepal logo, colours and typography.','गभटेक नेपालको लोगो, रङ र टाइपोग्राफी।'),
+    head(lang,'',T('Brand','ब्रान्ड'),T('Logo, colours and type for GovTech Nepal. Free to use when referring to the project.','गभटेक नेपालको लोगो, रङ र अक्षर। परियोजनाको सन्दर्भमा प्रयोग गर्न निःशुल्क।'))+f'''
+<div class="wrap prose">
+<h2>{T("Logo","लोगो")}</h2>
+<p>{T("The default logo is the ग tile with the Mukta wordmark. Use the dark version on dark backgrounds.","पूर्वनिर्धारित लोगो मुक्ता वर्डमार्कसहितको ग टाइल हो। गाढा पृष्ठभूमिमा डार्क संस्करण प्रयोग गर्नुहोस्।")}</p>
+<div class="logo-tiles">
+<figure class="tile" style="margin:0"><img src="/assets/brand/logo-2-light-mukta.svg" alt="{T("GovTech Nepal logo, light","गभटेक नेपाल लोगो, हल्का")}" width="620" height="200"><figcaption class="tile-cap"><span>{T("Light","हल्का")}</span><a href="/assets/brand/logo-2-light-mukta.svg" download>SVG</a></figcaption></figure>
+<figure class="tile dark" style="margin:0"><img src="/assets/brand/logo-2-dark-mukta.svg" alt="{T("GovTech Nepal logo, dark","गभटेक नेपाल लोगो, गाढा")}" width="620" height="200"><figcaption class="tile-cap"><span>{T("Dark","गाढा")}</span><a href="/assets/brand/logo-2-dark-mukta.svg" download>SVG</a></figcaption></figure>
+</div>
+<h2>{T("Mark concepts","चिह्नका अवधारणाहरू")}</h2>
+<p>{T("Four marks are under consideration. Try them across the site with the switcher in the footer, or add ?logo=1, 2, 3 or 4 to any address.","चारवटा चिह्नमाथि विचार भइरहेको छ। फुटरको स्विचरबाट वा कुनै पनि ठेगानामा ?logo=1, 2, 3 वा 4 थपेर साइटभरि हेर्नुहोस्।")}</p>
+<div class="marks">{''.join(f'<figure><img src="/assets/brand/mark-{n}-light.svg" alt="" width="72" height="72"><figcaption>{c} · <a href="?logo={n}">{T("Preview","हेर्नुहोस्")}</a></figcaption></figure>' for n,c in concepts)}</div>
+<h2>{T("Colour","रङ")}</h2>
+<div class="swatches">{''.join(f'<div class="sw"><i style="background:{h}{";box-shadow:inset 0 -1px 0 #E2E0DA" if h=="#F7F5F0" else ""}"></i><div><b>{T(a,b)}</b><code>{h}</code><br><span class="muted">{u}</span></div></div>' for a,b,h,u in sw)}</div>
+<h2>{T("Typography","टाइपोग्राफी")}</h2>
+<p>{T("Mukta is used for everything: headings, body text and the wordmark. It covers both Devanagari and Latin and is open source (SIL Open Font License).","शीर्षक, मुख्य पाठ र वर्डमार्क सबैमा मुक्ता प्रयोग हुन्छ। यसले देवनागरी र ल्याटिन दुवै समेट्छ र खुला स्रोत (SIL Open Font License) हो।")}</p>
+<div class="logo-tiles">
+<div class="type-sample"><span class="muted small">Mukta · {T("primary","मुख्य")}</span><p class="big">GovTech Nepal</p><p class="big" lang="ne">गभटेक नेपाल</p></div>
+<div class="type-sample"><span class="muted small">Khand · {T("alternative, not used on the site","विकल्प, साइटमा प्रयोग हुँदैन")}</span><p class="big khand">GovTech Nepal</p><p class="big khand" lang="ne">गभटेक नेपाल</p></div>
+</div>
+<p class="small muted" style="margin-top:1rem">{T("Alternative lockup with the Khand wordmark:","खण्ड वर्डमार्कसहितको वैकल्पिक लकअप:")} <a href="/assets/brand/logo-2-light-khand.svg">{T("light","हल्का")}</a> · <a href="/assets/brand/logo-2-dark-khand.svg">{T("dark","गाढा")}</a></p>
+<h2>{T("Usage","प्रयोग")}</h2>
+<ul class="rules">
+<li>{T("Keep clear space around the logo equal to half the height of the mark.","लोगोवरिपरि चिह्नको आधा उचाइ बराबर खाली ठाउँ राख्नुहोस्।")}</li>
+<li>{T("Don’t recolour, stretch, rotate or add effects.","रङ नफेर्नुहोस्, नतन्काउनुहोस्, नघुमाउनुहोस्, प्रभाव नथप्नुहोस्।")}</li>
+<li>{T("Never combine the logo with the national emblem or flag.","लोगोलाई राष्ट्रिय निशान वा झण्डासँग कहिल्यै नमिसाउनुहोस्।")}</li>
+<li>{T("Don’t use it in a way that suggests official government endorsement.","सरकारी आधिकारिक समर्थन जनाउने गरी प्रयोग नगर्नुहोस्।")}</li>
+<li>{T("Minimum size: 16 px for the mark alone, 120 px wide for the full logo.","न्यूनतम आकार: चिह्न मात्र १६ पिक्सेल, पूरा लोगो १२० पिक्सेल चौडा।")}</li>
+<li>{T("Crimson is an accent: keep it small.","सिम्रिक सहायक रङ हो: थोरै मात्र प्रयोग गर्नुहोस्।")}</li>
+</ul>
+</div>''')
+    return out
+
+for lang in ('en','ne'):
+    content=build(lang)
+    for key,path in PAGES:
+        title,desc,body=content[key]
+        d=os.path.join(ROOT,'ne' if lang=='ne' else '',path)
+        os.makedirs(d,exist_ok=True)
+        open(os.path.join(d,'index.html'),'w').write(page(lang,key,path,title,desc,body))
+# 404
+t,dsc,b=('Page not found','',f'<section class="page-head"><div class="wrap"><h1>Page not found</h1><p class="lead">The page you were looking for doesn’t exist. <a href="/">Go to the home page</a>.</p><p class="lead" lang="ne">तपाईंले खोज्नुभएको पृष्ठ भेटिएन। <a href="/ne/">गृहपृष्ठमा जानुहोस्</a>।</p></div></section>')
+open(os.path.join(ROOT,'404.html'),'w').write(page('en','404','',t,'Page not found',b))
+print('built')
